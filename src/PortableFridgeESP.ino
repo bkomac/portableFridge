@@ -22,7 +22,7 @@
 #include <MFRC522.h>
 #include <SPI.h>
 
-//#include <LiquidCrystal_PCF8574.h>
+#include <LiquidCrystal_PCF8574.h>
 
 void fadeIn();
 void fadeOut();
@@ -76,7 +76,7 @@ int blue = 500;
 String sensorData = "";
 
 // LCD
-// LiquidCrystal_PCF8574 lcd(0x3F);
+ LiquidCrystal_PCF8574 lcd(0x3F);
 
 // INA219
 // Adafruit_INA219 ina219;
@@ -117,7 +117,7 @@ int GPIO_IN = 400;
 int BUTTON = 16;
 
 // DHT
-#define DHTPIN 3
+#define DHTPIN 2
 #define DHTTYPE DHT22 // DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
