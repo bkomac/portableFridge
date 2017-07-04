@@ -48,8 +48,8 @@ ADC_MODE(ADC_VCC);
 int lightTreshold = 50; // 0 - dark, >100 - light
 
 // APP
-String FIRM_VER = "1.5.2";
-String SENSOR = "RC522, DHT22"; // BMP180, HTU21, DHT11
+String FIRM_VER = "1.0.1";
+String SENSOR = "DHT22"; // BMP180, HTU21, DHT11
 
 String app_id = "";
 float adc;
@@ -82,7 +82,7 @@ String sensorData = "";
 // Adafruit_INA219 ina219;
 
 // CONF
-char deviceName[100] = "ESP";
+char deviceName[100] = "PortableFridge";
 
 char essid[40] = "iottest";
 char epwd[40] = "esptest123";
@@ -178,6 +178,27 @@ void setup() { //------------------------------------------------
   if (GPIO_IN < 100)
     pinMode(GPIO_IN, INPUT);
 
+    // LCD
+    Wire.begin();
+      Wire.beginTransmission(0x3F);
+      int error = Wire.endTransmission();
+      Serial.print("LCD status: ");
+      Serial.println(error);
+
+      if (error == 0) {
+        lcd.begin(20, 4);
+        lcd.home();
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.setBacklight(255);
+        lcd.print("  Initialising... ");
+        lcd.setCursor(0, 2);
+        lcd.print("  "+app_id);
+        lcd.setCursor(0, 3);
+        lcd.print("   v." + FIRM_VER);
+
+      }
+
   if (String(essid) != "" && String(essid) != "nan") {
     Serial.print("SID found. Trying to connect to ");
     Serial.print(essid);
@@ -224,28 +245,15 @@ void setup() { //------------------------------------------------
   }
 
   // RFID
-  SPI.begin();
+  /*SPI.begin();
   mfrc522.PCD_Init();
   mfrc522.PCD_DumpVersionToSerial();
+  */
 
   // ina219.begin();
 
-  // LCD
-  /*  Wire.begin();
-    Wire.beginTransmission(0x3F);
-    int error = Wire.endTransmission();
-    Serial.print("LCD status: ");
-    Serial.println(error);
-
-    if (error == 0) {
-      lcd.begin(20, 4);
-      lcd.home();
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.setBacklight(255);
-      lcd.print("Starting LCD ...");
-    }*/
-
+lcd.clear();
+lcd.home();
 } //--
 
 // -----------------------------------------------------------------------------
@@ -281,10 +289,35 @@ void loop() {
     humd = humd1;
     temp = temp1;
 
+    //lcd.clear();
+    lcd.home();
+
+    lcd.setCursor(0, 2);
+    lcd.print("--------------------");
+
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: " + String(temp, 1) + (char)223 +"C    ");
+
+    lcd.setCursor(0, 1);
+    lcd.print("Hum : " + String(humd, 1) + "%    ");
+
+    lcd.setCursor(0, 3);
+    String wifi = "Conn: "+ssid;
+    lcd.print(wifi.substring(0, 18));
+
+    lcd.setCursor(19, 3);
+    lcd.print(".");
+    delay(300);
+    lcd.setCursor(19, 3);
+    lcd.print(" ");
+    delay(1000);
+
     Serial.print(F("\nTemperature: "));
     Serial.print(temp);
     Serial.print(F("\nHumidity: "));
     Serial.println(humd);
+
+
   }
 
   yield();
@@ -296,7 +329,7 @@ void loop() {
 
 
   // RFID
-  readRFID(sensorData);
+  //readRFID(sensorData);
 
   if (MODE == "AUTO") {
     if (inputState == HIGH) {
