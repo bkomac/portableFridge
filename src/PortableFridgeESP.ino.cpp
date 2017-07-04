@@ -1,16 +1,19 @@
+# 1 "c:\\users\\bobo\\appdata\\local\\temp\\tmpenbj75"
+#include <Arduino.h>
+# 1 "C:/Users/bobo/Documents/Arduino/PortableFridge/portableFridge/src/PortableFridgeESP.ino"
 #include <Arduino.h>
 
 #include <FS.h>
 
-//#include <Adafruit_INA219.h>
+
 #include <Wire.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <PubSubClient.h>
 
-// needed for library
-//#include <DNSServer.h>
+
+
 #include <ESP8266WebServer.h>
 #include <WebSocketsServer.h>
 #include <Hash.h>
@@ -42,19 +45,19 @@ void createWebServer();
 
 ESP8266WebServer server(80);
 
-//websocket
+
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 WiFiClient client;
 PubSubClient mqClient(client);
 
-// Vcc measurement
-ADC_MODE(ADC_VCC);
-int lightTreshold = 50; // 0 - dark, >100 - light
 
-// APP
-String FIRM_VER = "1.0.2";
-String SENSOR = "DHT22"; // BMP180, HTU21, DHT11
+ADC_MODE(ADC_VCC);
+int lightTreshold = 50;
+
+
+String FIRM_VER = "1.0.1";
+String SENSOR = "DHT22";
 
 String app_id = "";
 float adc;
@@ -65,13 +68,13 @@ String apPass;
 int rssi;
 String ssid;
 
-// DHT
+
 float humd = NULL;
 float temp = NULL;
 
-// RGB
-int redPin = 16;   // 13;
-int greenPin = 16; // 12;
+
+int redPin = 16;
+int greenPin = 16;
 int bluePin = 16;
 
 int red = 1024;
@@ -80,13 +83,13 @@ int blue = 500;
 
 String sensorData = "";
 
-// LCD
+
  LiquidCrystal_PCF8574 lcd(0x3F);
 
-// INA219
-// Adafruit_INA219 ina219;
 
-// CONF
+
+
+
 char deviceName[100] = "PortableFridge";
 
 char essid[40] = "iottest";
@@ -95,7 +98,7 @@ char epwd[40] = "esptest123";
 String MODE = "AUTO";
 int timeOut = 5000;
 
-// mqtt config
+
 char mqttAddress[200] = "";
 int mqttPort = 1883;
 char mqttUser[20] = "";
@@ -103,7 +106,7 @@ char mqttPassword[20] = "";
 char mqttPublishTopic[200] = "iot/sensor";
 char mqttSuscribeTopic[200] = "iot/sensor";
 
-// REST API CONFIG
+
 char rest_server[40] = "";
 
 boolean rest_ssl = false;
@@ -121,20 +124,41 @@ int RELEY = 500;
 int GPIO_IN = 400;
 int BUTTON = 16;
 
-// DHT
+
 #define DHTPIN 2
-#define DHTTYPE DHT22 // DHT11
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-// RFID RC552
+
 #define RST_PIN 5
 #define SS_PIN 4
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-//MDNS
-String mdns = "";
 
-void setup() { //------------------------------------------------
+String mdns = "";
+void setup();
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
+void loop();
+void createWebServer();
+void sendRequest(String sensorData);
+void saveConfig(JsonObject &json);
+void mqCallback(char *topic, byte *payload, unsigned int length);
+bool mqReconnect();
+void mqPublish(String msg);
+bool testWifi();
+void setupAP(void);
+void readFS();
+void blink(void);
+void blink(int times);
+void blink(int times, int milisec);
+void blink(int times, int himilisec, int lowmilisec);
+String getMac();
+void readRFID(String &sensorData);
+String dump_byte_array(byte *buffer, byte bufferSize);
+void fadeIn();
+void fadeOut();
+#line 137 "C:/Users/bobo/Documents/Arduino/PortableFridge/portableFridge/src/PortableFridgeESP.ino"
+void setup() {
   Serial.begin(115200);
   Serial.println("Setup ...");
   delay(300);
@@ -147,7 +171,7 @@ void setup() { //------------------------------------------------
   digitalWrite(RELEY, LOW);
   digitalWrite(BUILTINLED, LOW);
 
-  // RGB
+
   if (redPin < 100 && greenPin < 100 && bluePin < 100) {
     pinMode(redPin, OUTPUT);
     pinMode(greenPin, OUTPUT);
@@ -166,13 +190,13 @@ void setup() { //------------------------------------------------
   Serial.println(app_id);
   app_id.toCharArray(deviceName, 200, 0);
 
-  // auto connect
+
   WiFi.setAutoConnect(true);
 
-  // clean FS, for testing
-  // SPIFFS.format();
 
-  // read config
+
+
+
   readFS();
 
   apSsid = "Config_" + app_id;
@@ -183,7 +207,7 @@ void setup() { //------------------------------------------------
   if (GPIO_IN < 100)
     pinMode(GPIO_IN, INPUT);
 
-    // LCD
+
     Wire.begin();
       Wire.beginTransmission(0x3F);
       int error = Wire.endTransmission();
@@ -220,7 +244,7 @@ void setup() { //------------------------------------------------
       mdns = "error";
     } else {
       Serial.println("mDNS responder started");
-      // Add service to MDNS-SD
+
       MDNS.addService("http", "tcp", 80);
       mdns = app_id.c_str();
     }
@@ -241,28 +265,20 @@ void setup() { //------------------------------------------------
   yield();
   createWebServer();
 
-  // MQTT
+
   if (String(mqttAddress) != "") {
     Serial.print(F("Seting mqtt server and callback... "));
     mqClient.setServer(mqttAddress, mqttPort);
     mqClient.setCallback(mqCallback);
     mqReconnect();
   }
-
-  // RFID
-  /*SPI.begin();
-  mfrc522.PCD_Init();
-  mfrc522.PCD_DumpVersionToSerial();
-  */
-
-  // ina219.begin();
-
+# 260 "C:/Users/bobo/Documents/Arduino/PortableFridge/portableFridge/src/PortableFridgeESP.ino"
 lcd.clear();
 lcd.home();
 
 webSocket.begin();
 webSocket.onEvent(webSocketEvent);
-} //--
+}
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
@@ -275,33 +291,33 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
                 IPAddress ip = webSocket.remoteIP(num);
                 Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
 
-				// send message to client
-				webSocket.sendTXT(num, "Connected");
+
+    webSocket.sendTXT(num, "Connected");
             }
             break;
         case WStype_TEXT:
             Serial.printf("[%u] get Text: %s\n", num, payload);
 
-            // send message to client
-            // webSocket.sendTXT(num, "message here");
 
-            // send data to all connected clients
-            // webSocket.broadcastTXT("message here");
+
+
+
+
             break;
         case WStype_BIN:
             Serial.printf("[%u] get binary length: %u\n", num, length);
             hexdump(payload, length);
 
-            // send message to client
-            // webSocket.sendBIN(num, payload, length);
+
+
             break;
     }
 }
 
 
-// -----------------------------------------------------------------------------
-// loop ------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
+
+
+
 void loop() {
   delay(10);
   rssi = WiFi.RSSI();
@@ -317,12 +333,12 @@ void loop() {
     buttonState = digitalRead(BUTTON);
 
   adc = ESP.getVcc() / 1000.00;
-  // adc = analogRead(A0);
+
 
   float humd1 = NULL;
   float temp1 = NULL;
 
-  // DHT
+
   delay(100);
   humd1 = dht.readHumidity();
   delay(100);
@@ -332,7 +348,7 @@ void loop() {
     humd = humd1;
     temp = temp1;
 
-    //lcd.clear();
+
     lcd.home();
 
     lcd.setCursor(0, 2);
@@ -371,18 +387,18 @@ Serial.print("Sending msg...");
   yield();
   sensorData = "";
 
-  // DHT
+
   if (humd != NULL && temp != NULL)
     sensorData = "\"temp\":" + String(temp) + ", \"hum\":" + String(humd);
 
 
-  // RFID
-  //readRFID(sensorData);
+
+
 
   if (MODE == "AUTO") {
     if (inputState == HIGH) {
       Serial.println(F("Sensor high..."));
-      // Serial.println(adc);
+
       if (adc <= lightTreshold) {
         digitalWrite(RELEY, HIGH);
       }
@@ -408,12 +424,12 @@ Serial.print("Sending msg...");
 
       if (WiFi.status() == WL_CONNECTED)
         blink(1, 5);
-      // sendRequest(sensorData);
+
       lastTime = millis();
     }
   }
 
-  // button pressed
+
   if (buttonState == LOW) {
     Serial.println(F("Button pressed..."));
     buttonPressed = true;
@@ -427,42 +443,17 @@ Serial.print("Sending msg...");
     delay(300);
   }
 
-  // MQTT client
+
   if (String(mqttSuscribeTopic) != "")
     mqClient.loop();
 
   delay(100);
-
-  // float shuntvoltage = 0;
-  // float busvoltage = 0;
-  // float current_mA = 0;
-  // float loadvoltage = 0;
-  //
-  // shuntvoltage = ina219.getShuntVoltage_mV();
-  // busvoltage = ina219.getBusVoltage_V();
-  // current_mA = ina219.getCurrent_mA();
-  // loadvoltage = busvoltage + (shuntvoltage / 1000);
-  //
-  // Serial.print("Bus Voltage:   ");
-  // Serial.print(busvoltage);
-  // Serial.println(" V");
-  // Serial.print("Shunt Voltage: ");
-  // Serial.print(shuntvoltage);
-  // Serial.println(" mV");
-  // Serial.print("Load Voltage:  ");
-  // Serial.print(loadvoltage);
-  // Serial.println(" V");
-  // Serial.print("Current:       ");
-  // Serial.print(current_mA);
-  // Serial.println(" mA");
-  // Serial.println("");
-  // delay(1000);
-
+# 461 "C:/Users/bobo/Documents/Arduino/PortableFridge/portableFridge/src/PortableFridgeESP.ino"
   webSocket.loop();
 
-} //---------------------------------------------------------------
+}
 
-// web server
+
 void createWebServer() {
   Serial.println(F("Starting server..."));
   yield();
@@ -579,7 +570,7 @@ void createWebServer() {
 
     meta["ssid"] = essid;
     meta["rssi"] = rssi;
-    meta["mdns"] =  mdns;
+    meta["mdns"] = mdns;
     meta["freeHeap"] = ESP.getFreeHeap();
     meta["upTimeSec"] = (millis() - startTime) / 1000;
 
@@ -610,9 +601,9 @@ void createWebServer() {
     JsonObject &root = jsonBuffer.parseObject(server.arg("plain"));
     Serial.println("Updating firmware...");
     String message = "";
-    //    for (uint8_t i = 0; i < server.args(); i++) {
-    //      message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
-    //    }
+
+
+
 
     String url = root["url"];
     Serial.println("");
@@ -780,7 +771,7 @@ void createWebServer() {
   server.on("/config", HTTP_OPTIONS, []() {
     blink();
 
-    // server.sendHeader("Access-Control-Max-Age", "10000");
+
     server.sendHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
     server.sendHeader("Access-Control-Allow-Headers",
                       "Origin, X-Requested-With, Content-Type, Accept");
@@ -852,10 +843,10 @@ void createWebServer() {
     server.send(200, "application/json", content);
     delay(3000);
 
-    // clean FS, for testing
+
     SPIFFS.format();
     delay(1000);
-    // reset settings - for testing
+
     WiFi.disconnect(true);
     delay(1000);
 
@@ -962,9 +953,9 @@ void createWebServer() {
   server.begin();
   Serial.println("Server started");
 
-} //--
+}
 
-// send request ---------------------------------------------------------
+
 void sendRequest(String sensorData) {
   String api_payload_s = String(api_payload);
   if (api_payload_s != "")
@@ -975,10 +966,10 @@ void sendRequest(String sensorData) {
                 FIRM_VER + "\"" + ", \"ip\":\"" + espIp + "\"" + ", \"id\":\"" +
                 app_id + "\"" + ", \"adc\":" + adc + "}}";
 
-  // REST request
+
   if (String(rest_server) != "") {
     WiFiClientSecure client;
-    // WiFiClient client;
+
     int i = 0;
     String url = rest_path;
     Serial.println("");
@@ -1029,7 +1020,7 @@ void sendRequest(String sensorData) {
     req = "";
   }
 
-  // MQTT publish
+
   if (String(mqttAddress) != "" && String(mqttPublishTopic) != "") {
     Serial.println();
     Serial.println(F("MQTT publish..."));
@@ -1040,7 +1031,7 @@ void sendRequest(String sensorData) {
   api_payload_s = "";
   data = "";
 
-} //--
+}
 
 void saveConfig(JsonObject &json) {
 
@@ -1054,7 +1045,7 @@ void saveConfig(JsonObject &json) {
   configFile.close();
 }
 
-// MQTT
+
 void mqCallback(char *topic, byte *payload, unsigned int length) {
   Serial.print(F("Message arrived ["));
   Serial.print(topic);
@@ -1072,19 +1063,7 @@ void mqCallback(char *topic, byte *payload, unsigned int length) {
 
   String temp = rootMqtt["sensor"]["data"]["temp"].asString();
   String hum = rootMqtt["sensor"]["data"]["hum"].asString();
-
-  /*lcd.setBacklight(255);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("MQTT msg arrived...");
-  delay(1000);
-  lcd.clear();
-
-  lcd.setCursor(0, 0);
-  lcd.print("Temperatura: " + temp + " C");
-  lcd.setCursor(0, 1);
-  lcd.print("Vlaga: " + hum + " %");
-  */
+# 1088 "C:/Users/bobo/Documents/Arduino/PortableFridge/portableFridge/src/PortableFridgeESP.ino"
 }
 
 bool mqReconnect() {
@@ -1100,13 +1079,13 @@ bool mqReconnect() {
     Serial.print(mqttSuscribeTopic);
 
     yield();
-    // Attempt to connect
+
     if (mqClient.connect(app_id.c_str(), mqttUser, mqttPassword)) {
       yield();
       Serial.print(F("\nconnected with cid: "));
       Serial.println(app_id);
 
-      // suscribe
+
       if (String(mqttSuscribeTopic) != "")
         mqClient.subscribe(String(mqttSuscribeTopic).c_str());
 
@@ -1125,7 +1104,7 @@ void mqPublish(String msg) {
 
   if (mqReconnect()) {
 
-    // mqClient.loop();
+
 
     Serial.print(F("\nPublish message to topic '"));
     Serial.print(mqttPublishTopic);
@@ -1138,7 +1117,7 @@ void mqPublish(String msg) {
   }
 }
 
-// tesing for wifi connection
+
 bool testWifi() {
   int c = 0;
   Serial.println("Waiting for Wifi to connect...");
@@ -1163,9 +1142,9 @@ bool testWifi() {
 
   blink(20, 30);
   delay(1000);
-  // reset esp
-  // ESP.reset();
-  // delay(3000);
+
+
+
   return false;
 }
 
@@ -1185,7 +1164,7 @@ void setupAP(void) {
     Serial.println(F(" networks found"));
     Serial.println(F("---------------------------------"));
     for (int i = 0; i < n; ++i) {
-      // Print SSID and RSSI for each network found
+
       Serial.print(i + 1);
       Serial.print(F(": "));
       Serial.print(WiFi.SSID(i));
@@ -1211,19 +1190,19 @@ void setupAP(void) {
 }
 
 void readFS() {
-  // read configuration from FS json
+
   Serial.println(F("mounting FS..."));
 
   if (SPIFFS.begin()) {
     Serial.println(F("mounted file system"));
     if (SPIFFS.exists("/config.json")) {
-      // file exists, reading and loading
+
       Serial.println(F("reading config file"));
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile) {
         Serial.println(F("opened config file"));
         size_t size = configFile.size();
-        // Allocate a buffer to store contents of the file.
+
         std::unique_ptr<char[]> buf(new char[size]);
 
         configFile.readBytes(buf.get(), size);
@@ -1233,7 +1212,7 @@ void readFS() {
         if (jsonConfig.success()) {
           Serial.println(F("\nparsed json"));
 
-          // config parameters
+
           String ssid1 = jsonConfig["ssid"].asString();
           ssid1.toCharArray(essid, 40, 0);
           String pwd1 = jsonConfig["password"].asString();
@@ -1301,10 +1280,10 @@ void readFS() {
     Serial.println(F("failed to mount FS"));
     blink(10, 50, 20);
   }
-  // end read
+
 }
 
-// blink
+
 void blink(void) { blink(1, 30, 30); }
 
 void blink(int times) { blink(times, 30, 30); }
@@ -1330,28 +1309,28 @@ String getMac() {
   return result;
 }
 
-// RGB
+
 int fadeSpeed = 10;
 int fadeStep = 2;
 
-// RFID
+
 void readRFID(String &sensorData) {
   if (sensorData == NULL)
     sensorData = "";
   else
     sensorData += ", ";
-  // Look for new cards
+
   if (!mfrc522.PICC_IsNewCardPresent()) {
     return;
   }
 
-  // Select one of the cards
+
   if (!mfrc522.PICC_ReadCardSerial()) {
     return;
   }
 
-  // Dump debug info about the card; PICC_HaltA() is automatically called
-  // mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+
+
   Serial.print(F("Card UID:"));
   String id = dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println();
@@ -1362,10 +1341,10 @@ void readRFID(String &sensorData) {
 
 String dump_byte_array(byte *buffer, byte bufferSize) {
 
-  /*for (byte i = 0; i < bufferSize; i++) {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], HEX);
-  }*/
+
+
+
+
 
   String val1 = String(mfrc522.uid.uidByte[0], HEX);
   String val2 = String(mfrc522.uid.uidByte[1], HEX);
