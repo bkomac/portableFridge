@@ -12,8 +12,8 @@
 // needed for library
 //#include <DNSServer.h>
 #include <ESP8266WebServer.h>
-#include <WebSocketsServer.h>
 #include <Hash.h>
+#include <WebSocketsServer.h>
 
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
@@ -42,7 +42,7 @@ void createWebServer();
 
 ESP8266WebServer server(80);
 
-//websocket
+// websocket
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 WiFiClient client;
@@ -53,7 +53,7 @@ ADC_MODE(ADC_VCC);
 int lightTreshold = 50; // 0 - dark, >100 - light
 
 // APP
-String FIRM_VER = "1.0.2";
+String FIRM_VER = "1.0.3";
 String SENSOR = "DHT22"; // BMP180, HTU21, DHT11
 
 String app_id = "";
@@ -79,9 +79,10 @@ int green = 1024;
 int blue = 500;
 
 String sensorData = "";
+String statusText = "";
 
 // LCD
- LiquidCrystal_PCF8574 lcd(0x3F);
+LiquidCrystal_PCF8574 lcd(0x3F);
 
 // INA219
 // Adafruit_INA219 ina219;
@@ -131,7 +132,7 @@ DHT dht(DHTPIN, DHTTYPE);
 #define SS_PIN 4
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-//MDNS
+// MDNS
 String mdns = "";
 
 void setup() { //------------------------------------------------
@@ -183,31 +184,31 @@ void setup() { //------------------------------------------------
   if (GPIO_IN < 100)
     pinMode(GPIO_IN, INPUT);
 
-    // LCD
-    Wire.begin();
-      Wire.beginTransmission(0x3F);
-      int error = Wire.endTransmission();
-      Serial.print("LCD status: ");
-      Serial.println(error);
+  // LCD
+  Wire.begin();
+  Wire.beginTransmission(0x3F);
+  int lcdError = Wire.endTransmission();
+  Serial.print("LCD status: ");
+  Serial.println(lcdError);
 
-      if (error == 0) {
-        lcd.begin(20, 4);
-        lcd.home();
-        lcd.clear();
-        lcd.setCursor(0, 1);
-        lcd.setBacklight(255);
-        lcd.print("  Initialising... ");
-        lcd.setCursor(0, 2);
-        lcd.print("  "+app_id);
-        lcd.setCursor(0, 3);
-        lcd.print("   v." + FIRM_VER);
-
-      }
+  if (lcdError == 0) {
+    lcd.begin(20, 4);
+    lcd.home();
+    lcd.clear();
+    lcd.setBacklight(255);
+    lcd.setCursor(0, 0);
+    lcd.print("  Initialising... ");
+    lcd.setCursor(0, 1);
+    lcd.print("  " + app_id);
+    lcd.setCursor(0, 2);
+    lcd.print("   v." + FIRM_VER);
+  }
 
   if (String(essid) != "" && String(essid) != "nan") {
-    Serial.print("SID found. Trying to connect to ");
+    Serial.print("SID found. Trying to connect to: ");
     Serial.print(essid);
     Serial.println("");
+    setStatus("Connecting to " + String(essid));
     WiFi.begin(essid, epwd);
     delay(100);
   }
@@ -257,47 +258,46 @@ void setup() { //------------------------------------------------
 
   // ina219.begin();
 
-lcd.clear();
-lcd.home();
+  lcd.clear();
+  lcd.home();
 
-webSocket.begin();
-webSocket.onEvent(webSocketEvent);
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 } //--
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload,
+                    size_t length) {
 
-    switch(type) {
-        case WStype_DISCONNECTED:
-            Serial.printf("[%u] Disconnected!\n", num);
-            break;
-        case WStype_CONNECTED:
-            {
-                IPAddress ip = webSocket.remoteIP(num);
-                Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+  switch (type) {
+  case WStype_DISCONNECTED:
+    Serial.printf("[%u] Disconnected!\n", num);
+    break;
+  case WStype_CONNECTED: {
+    IPAddress ip = webSocket.remoteIP(num);
+    Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0],
+                  ip[1], ip[2], ip[3], payload);
 
-				// send message to client
-				webSocket.sendTXT(num, "Connected");
-            }
-            break;
-        case WStype_TEXT:
-            Serial.printf("[%u] get Text: %s\n", num, payload);
+    // send message to client
+    webSocket.sendTXT(num, "Connected");
+  } break;
+  case WStype_TEXT:
+    Serial.printf("[%u] get Text: %s\n", num, payload);
 
-            // send message to client
-            // webSocket.sendTXT(num, "message here");
+    // send message to client
+    // webSocket.sendTXT(num, "message here");
 
-            // send data to all connected clients
-            // webSocket.broadcastTXT("message here");
-            break;
-        case WStype_BIN:
-            Serial.printf("[%u] get binary length: %u\n", num, length);
-            hexdump(payload, length);
+    // send data to all connected clients
+    // webSocket.broadcastTXT("message here");
+    break;
+  case WStype_BIN:
+    Serial.printf("[%u] get binary length: %u\n", num, length);
+    hexdump(payload, length);
 
-            // send message to client
-            // webSocket.sendBIN(num, payload, length);
-            break;
-    }
+    // send message to client
+    // webSocket.sendBIN(num, payload, length);
+    break;
+  }
 }
-
 
 // -----------------------------------------------------------------------------
 // loop ------------------------------------------------------------------------
@@ -332,21 +332,20 @@ void loop() {
     humd = humd1;
     temp = temp1;
 
-    //lcd.clear();
+    // lcd.clear();
     lcd.home();
 
     lcd.setCursor(0, 2);
     lcd.print("--------------------");
 
     lcd.setCursor(0, 0);
-    lcd.print("Temp: " + String(temp, 1) + (char)223 +"C    ");
+    lcd.print("Temp: " + String(temp, 1) + (char)223 + "C    ");
 
     lcd.setCursor(0, 1);
     lcd.print("Hum : " + String(humd, 1) + "%    ");
 
-    lcd.setCursor(0, 3);
-    String wifi = "Conn: "+ssid;
-    lcd.print(wifi.substring(0, 15));
+    String wifi = "Conn: " + WiFi.SSID();
+    setStatus(wifi.substring(0, 15));
 
     lcd.setCursor(16, 3);
     lcd.print(rssi);
@@ -363,9 +362,9 @@ void loop() {
     Serial.print(F("\nHumidity: "));
     Serial.println(humd);
 
-Serial.print("Sending msg...");
-    webSocket.broadcastTXT("{\"temp\":" +String(temp, 1) + ", \"hum\":"+String(humd, 1)+"}");
-
+    Serial.print("Sending msg...");
+    webSocket.broadcastTXT("{\"temp\":" + String(temp, 1) +
+                           ", \"hum\":" + String(humd, 1) + "}");
   }
 
   yield();
@@ -375,9 +374,8 @@ Serial.print("Sending msg...");
   if (humd != NULL && temp != NULL)
     sensorData = "\"temp\":" + String(temp) + ", \"hum\":" + String(humd);
 
-
   // RFID
-  //readRFID(sensorData);
+  // readRFID(sensorData);
 
   if (MODE == "AUTO") {
     if (inputState == HIGH) {
@@ -579,7 +577,7 @@ void createWebServer() {
 
     meta["ssid"] = essid;
     meta["rssi"] = rssi;
-    meta["mdns"] =  mdns;
+    meta["mdns"] = mdns;
     meta["freeHeap"] = ESP.getFreeHeap();
     meta["upTimeSec"] = (millis() - startTime) / 1000;
 
@@ -663,9 +661,6 @@ void createWebServer() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
 
-    root["ssid"] = essid;
-    root["password"] = "*******";
-
     root["timeOut"] = timeOut;
     root["relleyPin"] = RELEY;
     root["sensorInPin"] = GPIO_IN;
@@ -700,11 +695,6 @@ void createWebServer() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.parseObject(server.arg("plain"));
     Serial.println(F("\nSaving config..."));
-
-    String ssid1 = root["ssid"].asString();
-    ssid1.toCharArray(essid, 40, 0);
-    String pwd1 = root["password"].asString();
-    pwd1.toCharArray(epwd, 40, 0);
 
     String timeOut1 = root["timeOut"];
     timeOut = timeOut1.toInt();
@@ -826,8 +816,12 @@ void createWebServer() {
 
     String content;
     root.printTo(content);
+    saveSsid(root);
     server.send(200, "application/json", content);
 
+    delay(500);
+    ESP.eraseConfig();
+    delay(1000);
     WiFi.disconnect();
     delay(1000);
     WiFi.mode(WIFI_STA);
@@ -844,8 +838,8 @@ void createWebServer() {
     JsonObject &root = jsonBuffer.createObject();
 
     root["rc"] = 0;
-    root["msg"] = "Reseting ESP config...";
-    Serial.println(F("\nReseting ESP config..."));
+    root["msg"] = "Reseting ESP config. Configuration will be erased ...";
+    Serial.println(F("\nReseting ESP config. Configuration will be erased..."));
 
     String content;
     root.printTo(content);
@@ -858,6 +852,8 @@ void createWebServer() {
     // reset settings - for testing
     WiFi.disconnect(true);
     delay(1000);
+
+    ESP.eraseConfig();
 
     ESP.reset();
     delay(5000);
@@ -1003,14 +999,14 @@ void sendRequest(String sensorData) {
     Serial.print("POST data to URL: ");
     Serial.println(url);
     delay(10);
-    String req = String("POST ") + url + " HTTP/1.1\r\n" + "Host: " +
-                 String(rest_server) + "\r\n" + "User-Agent: ESP/1.0\r\n" +
-                 "Content-Type: application/json\r\n" +
-                 "Cache-Control: no-cache\r\n" + "Sensor-Id: " +
-                 String(app_id) + "\r\n" + "Token: " + String(api_token) +
-                 "\r\n" +
-                 "Content-Type: application/x-www-form-urlencoded;\r\n" +
-                 "Content-Length: " + data.length() + "\r\n" + "\r\n" + data;
+    String req =
+        String("POST ") + url + " HTTP/1.1\r\n" +
+        "Host: " + String(rest_server) + "\r\n" + "User-Agent: ESP/1.0\r\n" +
+        "Content-Type: application/json\r\n" + "Cache-Control: no-cache\r\n" +
+        "Sensor-Id: " + String(app_id) + "\r\n" +
+        "Token: " + String(api_token) + "\r\n" +
+        "Content-Type: application/x-www-form-urlencoded;\r\n" +
+        "Content-Length: " + data.length() + "\r\n" + "\r\n" + data;
     Serial.print(F("Request: "));
     Serial.println(req);
     client.print(req);
@@ -1047,6 +1043,18 @@ void saveConfig(JsonObject &json) {
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
     Serial.println(F("failed to open config file for writing"));
+  }
+
+  json.printTo(Serial);
+  json.printTo(configFile);
+  configFile.close();
+}
+
+void saveSsid(JsonObject &json) {
+
+  File configFile = SPIFFS.open("/ssid.json", "w");
+  if (!configFile) {
+    Serial.println(F("failed to open ssid.json file for writing"));
   }
 
   json.printTo(Serial);
@@ -1218,10 +1226,10 @@ void readFS() {
     Serial.println(F("mounted file system"));
     if (SPIFFS.exists("/config.json")) {
       // file exists, reading and loading
-      Serial.println(F("reading config file"));
+      Serial.println(F("reading config.json file"));
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile) {
-        Serial.println(F("opened config file"));
+        Serial.println(F("opened config.json file"));
         size_t size = configFile.size();
         // Allocate a buffer to store contents of the file.
         std::unique_ptr<char[]> buf(new char[size]);
@@ -1230,15 +1238,11 @@ void readFS() {
         DynamicJsonBuffer jsonBuffer;
         JsonObject &jsonConfig = jsonBuffer.parseObject(buf.get());
         jsonConfig.printTo(Serial);
+
         if (jsonConfig.success()) {
-          Serial.println(F("\nparsed json"));
+          Serial.println(F("\nparsed config.json"));
 
           // config parameters
-          String ssid1 = jsonConfig["ssid"].asString();
-          ssid1.toCharArray(essid, 40, 0);
-          String pwd1 = jsonConfig["password"].asString();
-          pwd1.toCharArray(epwd, 40, 0);
-
           String deviceName1 = jsonConfig["deviceName"].asString();
           if (deviceName1 != "")
             deviceName1.toCharArray(deviceName, 200, 0);
@@ -1295,7 +1299,39 @@ void readFS() {
         }
       }
     } else {
-      Serial.println(F("Config file doesn't exist yet!"));
+      Serial.println(F("Config.json file doesn't exist yet!"));
+    }
+
+    // ssid.json
+    if (SPIFFS.exists("/ssid.json")) {
+      // file exists, reading and loading
+      Serial.println(F("reading ssid.json file"));
+      File ssidFile = SPIFFS.open("/ssid.json", "r");
+      if (ssidFile) {
+        Serial.println(F("opened config file"));
+        size_t size = ssidFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
+
+        ssidFile.readBytes(buf.get(), size);
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject &jsonConfig = jsonBuffer.parseObject(buf.get());
+        jsonConfig.printTo(Serial);
+        if (jsonConfig.success()) {
+          Serial.println(F("\nparsed ssid.json"));
+
+          // ssid parameters
+          String ssid1 = jsonConfig["ssid"].asString();
+          ssid1.toCharArray(essid, 40, 0);
+          String pwd1 = jsonConfig["password"].asString();
+          pwd1.toCharArray(epwd, 40, 0);
+
+        } else {
+          Serial.println(F("failed to load ssid.json"));
+        }
+      }
+    } else {
+      Serial.println(F("ssid.json file doesn't exist yet!"));
     }
   } else {
     Serial.println(F("failed to mount FS"));
@@ -1457,4 +1493,10 @@ void fadeOut() {
     if (greenx >= 1024 && redx >= 1024 && bluex >= 1024)
       break;
   }
+}
+
+void setStatus(String msg) {
+  //lcd.print("                    ");
+  lcd.setCursor(0, 3);
+  lcd.print(msg.substring(0,20));
 }
