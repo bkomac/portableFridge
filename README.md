@@ -1,2 +1,2 @@
 # portableFridge
-Portable frifge retrofited with iot
+Portable fridge retrofited with iot sensors.
